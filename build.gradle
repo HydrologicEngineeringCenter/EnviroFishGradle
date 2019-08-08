@@ -1,0 +1,75 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+archivesBaseName = 'EnviroFish'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation fileTree(dir: 'lib', include: '*.jar')
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.4.0'
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.4.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.4.0")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.4.0")
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'envirofish.Main'
+        )
+    }
+
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+application{
+    mainClassName="envirofish.Main"
+    //applicationDefaultJvmArgs = ["-Djava.library.path=$projectDir/bin"]
+
+}
+
+startScripts.enabled = false
+installDist.enabled = false
+distZip.enabled = false
+distTar.enabled = false
+
+task copyNatives(type: Copy) {
+    into ("$buildDir/distributions/")
+    into("$applicationName") {
+        from "$projectDir/bin"
+    }
+}
+
+task copyJar(type: Copy) {
+    from "$buildDir/libs"
+    into "$buildDir/distributions/$applicationName"
+}
+copyJar.dependsOn jar
+
+task copyBatch(type: Copy){
+    from "$projectDir/src/main/java/deploy/windows"
+    into "$buildDir/distributions/$applicationName"
+}
+
+task packageDistribution(type: Zip) {
+    archiveFileName = "EnviroFish.zip"
+    destinationDirectory = file("$buildDir/distributions/")
+    from "$buildDir/distributions/$applicationName"
+    into "$applicationName"
+}
+packageDistribution.dependsOn copyJar, copyNatives, copyBatch
+
+build {
+    finalizedBy copyJar, copyNatives, copyBatch, packageDistribution
+}
+
+
